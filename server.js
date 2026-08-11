@@ -1,3 +1,5 @@
+//json (javascript object notation) is a format, not a file, 
+
 
 // 'express' and 'app' are conventions
 //'require('express') allows layering middleware (api bridge builder)
@@ -14,6 +16,7 @@ const bcrypt = require('bcrypt')
 const {Pool} = require('pg')
 
 //'express()' is a function that acts like a blueprint and when called, allows the server spins up fresh instance
+//'app' is an Express app object
 const app = express()
 
 const port = 3000
@@ -36,10 +39,16 @@ app.listen(port)
 //app receives JSON data that arrives as raw data bytes and 'express.json' translates the bytes into usable data
 app.use(express.json())
 
+//object is not creating session
+//it's telling the session (express) how to manage the session configuration
 app.use(
+    //'session' is a function that creates and returns an annonymous middleware function
     session({
+        //a secret value used when creating/verifying the session's cookie signature and that value is received by session middleware
         secret: process.env.SESSION_SECRET,
+        //tells session middleware not to save the value, if the value hasn't changed
         resave: false,
+        //another config session just telling the middleware not to save a session  that hasn't been initialized 
         saveUninitialized: false
     })
 )
