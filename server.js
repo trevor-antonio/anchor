@@ -39,7 +39,7 @@ app.listen(port)
 //app receives JSON data that arrives as raw data bytes and 'express.json' translates the bytes into usable data
 app.use(express.json())
 
-//object is not creating session
+//app.use is a core express method used to add middleware functions to the request-processing pipline. 
 //it's telling the session (express) how to manage the session configuration
 app.use(
     //'session' is a function that creates and returns an annonymous middleware function
@@ -52,3 +52,9 @@ app.use(
         saveUninitialized: false
     })
 )
+
+//api routes
+
+app.post('/register'), async (req, res) => {
+    const { email, username, password} = req.body
+} 
