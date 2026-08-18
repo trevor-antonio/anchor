@@ -1,4 +1,4 @@
-
+\connect anchor_db;
 
 -- Reset database
 DROP TABLE IF EXISTS users;

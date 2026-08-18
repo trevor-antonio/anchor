@@ -21,39 +21,21 @@ const {Pool} = require('pg')
 //'app' is an Express app object
 const app = express()
 
-const port = 3000
+const PORT = 3000
 
 // database
-//this code block is fixed syntax
-//creates 'pool' object
-//'pool' object is created when the app starts
-//'process.env' connects with the currently stored data in Node under the 'database_url' name 
-//instiating a new pool object
-//'new' tell js to create  new object from the class
-//constructor is set up recipe inside class
 const pool = new Pool({
-    connectionString: process.env.DATABSE_URL
+    connectionString: process.env.DATABASE_URL
 });
-
-app.listen(port)
 
 //middleware
 
-//middleware is a function that sits in the middle of (req, res), doing something with the req before it reaches the final route handler (function)
-
-//app receives JSON data that arrives as raw data bytes and 'express.json' translates the bytes into usable data
 app.use(express.json())
 
-//app.use is a core express method used to add middleware functions to the request-processing pipline. 
-//it's telling the session (express) how to manage the session configuration
 app.use(
-    //'session' is a function that creates and returns an annonymous middleware function
     session({
-        //a secret value used when creating/verifying the session's cookie signature and that value is received by session middleware
         secret: process.env.SESSION_SECRET,
-        //tells session middleware not to save the value, if the value hasn't changed
         resave: false,
-        //another config session just telling the middleware not to save a session  that hasn't been initialized 
         saveUninitialized: false
     })
 )
@@ -61,32 +43,22 @@ app.use(
 //api routes
 
 app.post('/register', async (req, res) => {
-    const { email, username, password} = req.body
+    const { email, username, password } = req.body
 
-    //'bcrypt' is intentionally slow
-    //'12' is a cost factor that requires more compute power for eah hash
-    //'bcrypt' generates a unique random salt for each password like a random seasoning packet that gets added to keep similar passwords assigned to differet hashes
     const passwordHash = await bcrypt.hash(password, 12)
 
     const result = await pool.query(
-        //'INSERT INTO' adds data to each column
-        
-        //'$' is leaving space for value in each column
-
         `
         INSERT INTO users (email, username, password_hash)
-   
         VALUES ($1, $2, $3)
-        
-        RETURNING id, email, username`
-
-        [email, user, passwordHash]
+        RETURNING id, email, username`,
+        [email, username, passwordHash]
     )
-    //take this JS data structure and serialize (translate) into JSON so it can be transmitted in an HTTP response
+
     res.json(result.rows[0])
-})   
-    
-    app.post("/login", async (req, res) => {
+})
+
+app.post("/login", async (req, res) => {
     const { email, password } = req.body
 
     const result = await pool.query(
@@ -100,28 +72,35 @@ app.post('/register', async (req, res) => {
 
     const user = result.rows[0]
 
-    const passwordMatch = await bcrypt.compare(
-        password,
-        user.password_hash
-    )
-    //try {
+    // TODO: what should happen here if `user` is undefined
+    // (no matching email found)? Think about what runs on the
+    // next line if you skip this check.
+
+    try {
+        // TODO: should this bcrypt.compare call be inside or
+        // outside this try block? What happens right now if
+        // `user` is undefined by the time this line runs?
+        const passwordMatch = await bcrypt.compare(
+            password,
+            user?.password_hash
+        )
+
         if (passwordMatch) {
-        req.session.userId = user.id
+            req.session.userId = user.id
+            res.json({
+                message: "Logged in"
+            })
+            return
+        }
+        if (!user) {
 
-        res.json({
-            message: "Logged in"
+        }
+        res.status(401).json({
+            message: "Invalid credentials"
         })
-
-        return
+    } catch (error) {
+        console.log(error)
     }
-
-    res.status(401).json({
-        message: "Invalid credentials"
-    })
-    //catch (error) {
-    //    console.log(error)
-    //}
-
 })
 
 // 2FA
@@ -136,4 +115,3 @@ app.post("/verify-2fa", (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
 })
-
