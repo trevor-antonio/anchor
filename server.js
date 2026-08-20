@@ -61,6 +61,7 @@ app.post('/register', async (req, res) => {
 app.post("/login", async (req, res) => {
     const { email, password } = req.body
 
+ try {       
     const result = await pool.query(
         `
         SELECT id, email, username, password_hash
@@ -72,16 +73,12 @@ app.post("/login", async (req, res) => {
 
     const user = result.rows[0]
 
-    // TODO: what should happen here if `user` is undefined
-    // (no matching email found)? Think about what runs on the
-    // next line if you skip this check.
-
-    try {
-        // TODO: should this bcrypt.compare call be inside or
-        // outside this try block? What happens right now if
-        // `user` is undefined by the time this line runs?
+ 
+  
+        
         const passwordMatch = await bcrypt.compare(
             password,
+            //using chaining to validate if user exists
             user?.password_hash
         )
 
@@ -95,13 +92,15 @@ app.post("/login", async (req, res) => {
         if (!user) {
 
         }
+        }
         res.status(401).json({
             message: "Invalid credentials"
         })
-    } catch (error) {
-        console.log(error)
-    }
-})
+        }catch (error) {
+            console.log(error) 
+            res.status(500).json
+   }
+
 
 // 2FA
 app.post("/verify-2fa", (req, res) => {
