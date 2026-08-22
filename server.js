@@ -42,6 +42,8 @@ app.use(
 
 //api routes
 
+
+//register
 app.post('/register', async (req, res) => {
     const { email, username, password } = req.body
 
@@ -58,29 +60,33 @@ app.post('/register', async (req, res) => {
     res.json(result.rows[0])
 })
 
+
+// login
+
 app.post("/login", async (req, res) => {
     const { email, password } = req.body
 
- try {       
-    const result = await pool.query(
-        `
-        SELECT id, email, username, password_hash
-        FROM users
-        WHERE email = $1
-        `,
-        [email]
-    )
-
-    const user = result.rows[0]
-
- 
-  
-        
-        const passwordMatch = await bcrypt.compare(
-            password,
-            //using chaining to validate if user exists
-            user?.password_hash
+        try {       
+        const result = await pool.query(
+            `
+            SELECT id, email, username, password_hash
+            FROM users
+            WHERE email = $1
+            `,
+            [email]
         )
+
+        const user = result.rows[0]         
+        
+        if (!user) {
+            return res.status(401).json({
+                message: "Invalid credentials"
+            })
+            }
+        const passwordMatch = await bcrypt.compare(
+                password,
+                user.password_hash
+            )
 
         if (passwordMatch) {
             req.session.userId = user.id
@@ -89,16 +95,17 @@ app.post("/login", async (req, res) => {
             })
             return
         }
-        if (!user) {
-
-        }
-        }
+       
         res.status(401).json({
-            message: "Invalid credentials"
+            message: "Invalid credentials"    
         })
+           return
+
         }catch (error) {
             console.log(error) 
-            res.status(500).json
+            res.status(500).json({
+                message: "Something went wrong on our end. Try again"
+            })
    }
 
 
