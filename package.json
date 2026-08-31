@@ -19,8 +19,11 @@
   },
   "homepage": "https://github.com/codertrev415/anchor#readme",
   "dependencies": {
+    "@simplewebauthn/server": "^13.3.3",
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-openid-connect": "^3.4.0",
     "express-session": "^1.19.0",
     "otplib": "^13.5.0",
     "pg": "^8.23.0"
