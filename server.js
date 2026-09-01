@@ -16,3 +16,25 @@ const {
     generateAuthenticationOptions,
     verifyAuthenticationResponse
 } = require('@simplewebauthn/server')
+
+//destructing the pg import to only use 'pool' property (class)
+const { Pool } = require('pg')
+
+const app = express()
+
+//use process.env.PORT OR fall back to 3000
+const PORT = process.env.PORT || 3000
+
+const pool = new POOL({connectionString: process.env.DATABASE_URL})
+
+// Middleware 
+
+app.use(express.json())
+
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false
+ })
+)
