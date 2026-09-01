@@ -36,3 +36,15 @@ Next to connect
 
 Note: Architecture vs. syntax
 Solid on individual pieces (middleware functions, express.json(), session() config, status codes). Still developing: architecting how pieces fit together across the full request lifecycle. Normal at this stage, not a gap.
+
+## WebAuthn/OIDC Architecture, August 30, 2026
+
+Out sick most of the week with a cold, first real coding day back. Made a real architecture decision: Anchor's auth is locking in as OIDC (Google/Microsoft) + native WebAuthn passkeys, no password auth at all — dropped bcrypt/password_hash entirely. Landed on this after walking through the security tradeoffs (passkeys = strongest, phishing-resistant, no shared secret; OIDC = strong but trust shifts to the provider; passwords = weakest) and specifically reasoning through Anchor's population — unhoused folks and people with SUD lose/sell devices often, so OIDC needed to stay in as a recovery path rather than going passkey-only.
+
+Had ChatGPT scaffold a right-sized server.js auth template (after an earlier 728-line version was scoped way too big) — OIDC config via express-openid-connect, WebAuthn registration + authentication route pairs via @simplewebauthn/server, a shared requireAuthentication middleware covering both auth paths. Fixed a real syntax bug in the old /login route (unclosed try block) while reviewing.
+
+Architecture vs. syntax note: Walked through the first ~100 lines line-by-line and could explain roughly 80-85% cold — Express fundamentals (middleware, async routes, destructuring vs. plain requires) are solid, no gaps there. What's still developing is library-specific vocabulary layered on top of Express, not Express itself — RP name/RP ID (WebAuthn's terms for "relying party," i.e. Anchor), what verification.registrationInfo actually holds, why the WebAuthn counter matters for replay protection. That's new terminology sitting on a structure you already understand, not a structural gap.
+
+Shipped today: Hand-typed the top of server.js from scratch (no copy/paste except comments) — imports, dotenv config, session, OIDC destructure. Caught two real bugs on review: a duplicate const express declaration and a typo in the @simplewebauthn/server require path (( instead of /). Good evidence the hand-typing approach is doing its job — these are exactly the kind of small, real mistakes that build debugging instinct.
+
+Still open: database schema rework (drop password_hash, add tables for OIDC identity + WebAuthn credential linkage — scope still needs defining), user-lookup logic in the WebAuthn login routes (left as TODOs deliberately), React frontend for testing register/login flows (deferred).

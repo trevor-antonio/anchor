@@ -1,5 +1,3 @@
-const express = require('express')
-
 // 🟩 Node — loads .env variables into process.env
 require('dotenv/config')
 
@@ -17,4 +15,4 @@ const {
     verifyRegistrationResponse,
     generateAuthenticationOptions,
     verifyAuthenticationResponse
-} = require('@simplewebauthn(server')
+} = require('@simplewebauthn/server')
