@@ -54,7 +54,7 @@ const oidcConfig = {
     //tells the lib where to find OIDC metadata
     issuerBaseURL: process.env.OIDC_ISSUER_URL
 }
-//regusters middleware; uses OIDC middleware
+//registers middleware; uses OIDC middleware
 app.use(auth(oidcConfig))
 
 //WEBAUTHN - REGISTRATION (creating a new passkey)
@@ -80,6 +80,41 @@ app.post('/webauthn/register/options', async (req, res) => {
         res.json({ success: true })
     } catch (error) {
         console.log(error)
-        res.status(500).json({ message: 'Unable to verify passkey registration'})
+        res.status(500).json({ message: 'Unable to create registration options'})
     }
 })
+
+app.post('/webauthn/register/verify', async (req, res) => {
+    try {
+        const user = req.session.user
+
+        if (!user) {
+            return res.status(401).json({message: 'Authentication required'})
+        }
+
+        //thrid party checks the signed challenge response again
+
+        const verification = await verifyRegistrationResponse({
+            //raw credential data browser returns
+            response: req.body,
+            //challange we generated and stored
+            expectedChallenge: req.session.currentChallenge,
+            //
+        
+            //origin (protocol + domain) req must come from
+            expectedOrigin: process.env.WEBAUTHN_ORIGIN,
+            //config must match rpID used before
+            expectedRPID: process.env.WEBAUTHN_RP_ID
+})
+        if (!verification.verified) {
+            return res.status(400).json({message: 'Passkey verification failed'})
+        }
+
+        const { registrationInfo } = verification
+        const { credentialID, credentialPublicKey, counter} =registrationInfo
+
+        //Save new credential to db connected to user
+        //may need to update schema
+        await db.saverUserCredential()
+
+    })
