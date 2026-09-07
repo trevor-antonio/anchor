@@ -25,7 +25,7 @@ const app = express()
 //use process.env.PORT OR fall back to 3000
 const PORT = process.env.PORT || 3000
 
-const pool = new POOL({connectionString: process.env.DATABASE_URL})
+const pool = new Pool({connectionString: process.env.DATABASE_URL})
 
 // Middleware 
 
@@ -115,6 +115,14 @@ app.post('/webauthn/register/verify', async (req, res) => {
 
         //Save new credential to db connected to user
         //may need to update schema
-        await db.saverUserCredential()
+        await db.saveUserCredential({
+            userId: user.id,
+            credentialID: Buffer.from(credentialID).toString('base64url'),
+            credentialPublicKey: Buffer.from(credentialPublicKey).toString('base64url'),
+            counter: counter,
+            transports: req.body.response.transports || []
+        })
 
+        //clear reg challenge from the session
+         delete req.session.currentChallange
     })
