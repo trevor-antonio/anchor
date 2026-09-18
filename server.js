@@ -74,8 +74,8 @@ app.post('/webauthn/register/options', async (req, res) => {
             excludeCredentials: user.credentials || []
         })
 
-        //save challange in session so /verify can confirm it matches later
-        req.session.currentChallange
+        //save challenge in session so /verify can confirm it matches later
+        req.session.currentChallenge
 
         res.json({ success: true })
     } catch (error) {

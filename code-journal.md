@@ -48,3 +48,37 @@ Architecture vs. syntax note: Walked through the first ~100 lines line-by-line a
 Shipped today: Hand-typed the top of server.js from scratch (no copy/paste except comments) — imports, dotenv config, session, OIDC destructure. Caught two real bugs on review: a duplicate const express declaration and a typo in the @simplewebauthn/server require path (( instead of /). Good evidence the hand-typing approach is doing its job — these are exactly the kind of small, real mistakes that build debugging instinct.
 
 Still open: database schema rework (drop password_hash, add tables for OIDC identity + WebAuthn credential linkage — scope still needs defining), user-lookup logic in the WebAuthn login routes (left as TODOs deliberately), React frontend for testing register/login flows (deferred).
+
+## Date: September 18, 2026
+## Journal Entry — WebAuthn/OIDC Auth Flow: Ceremonies, Middleware & Session Config (Anchor)
+
+
+What I worked through today:
+
+Spent this session building a solid mental model of WebAuthn before touching more code, then walked the actual Anchor auth template line-by-line.
+
+WebAuthn conceptually:
+
+Two ceremonies: registration and authentication (aka login)
+Public/private key pair generated together at registration; public key stored server-side, private key never leaves the device's secure hardware
+The challenge is a fresh, random, server-generated value per attempt — this is what prevents replay attacks, since a signed challenge can only be used once
+generateRegistrationOptions doesn't create a passkey — it builds the instructions/challenge that get sent to the browser. navigator.credentials.create() is the actual browser API call (frontend, not yet built) that triggers the device's native passkey modal and generates the key pair
+verifyRegistrationResponse checks the signed response is legit — it does NOT store to DB on its own; storage is a separate step my code still has to do (currently a TODO in the template)
+generateAuthenticationOptions / verifyAuthenticationResponse = the login-time pair, checking whether a presented passkey matches what's on file
+Real sequence: options generated → browser API creates key pair on device → response sent to server → server verifies → server stores in DB
+
+Architecture decision reconfirmed: OIDC (Auth0) is the required foundation for every account. WebAuthn is strictly an optional convenience layer added AFTER a valid OIDC session exists — never a standalone path to account creation or access.
+
+Express/session concepts:
+
+Middleware = code that runs in the window between a request arriving and a response going out; not inherently about responses
+express.json() parses incoming request bodies into req.body — nothing to do with outgoing data
+session secret signs the session cookie so it can't be forged; lives in .env, never committed to repo, fine to live in a cloud secrets manager in production
+resave: false — don't rewrite a session if nothing changed (library book analogy: don't re-stamp a due date if the loan didn't change)
+saveUninitialized: false — don't create a session record at all until something is actually written to it (analogy: don't open a library card for someone who never checked anything out)
+
+Bug flagged for later: delete req.session.currentChallenge sits inside the try block in both verify routes, after the verification call. If verification throws instead of returning verified: false, execution skips to catch and the challenge never gets cleared. Fix: move the delete into a finally block.
+
+.env fixed today: Renamed Auth0 env vars to match what the template's process.env calls actually expect (AUTH0_ISSUER_BASE_URL → OIDC_ISSUER_URL, etc.), and added missing vars: SESSION_SECRET, DATABASE_URL, WEBAUTHN_RP_ID, WEBAUTHN_ORIGIN.
+
+Next up: Wire up the actual DB insert in verifyRegistrationResponse (currently commented-out TODO), then continue the line-by-line walkthrough through the rest of the template.
