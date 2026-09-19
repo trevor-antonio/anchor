@@ -82,3 +82,30 @@ Bug flagged for later: delete req.session.currentChallenge sits inside the try b
 .env fixed today: Renamed Auth0 env vars to match what the template's process.env calls actually expect (AUTH0_ISSUER_BASE_URL → OIDC_ISSUER_URL, etc.), and added missing vars: SESSION_SECRET, DATABASE_URL, WEBAUTHN_RP_ID, WEBAUTHN_ORIGIN.
 
 Next up: Wire up the actual DB insert in verifyRegistrationResponse (currently commented-out TODO), then continue the line-by-line walkthrough through the rest of the template.
+
+## Date: September 19, 2026
+
+## Journal Entry — Anchor DB Schema Redesign: Auth0 Identity vs. Profile Split, WebAuthn Provisioning
+
+Biggest structural decision today: Split users into two tables. users is now pure identity — just what Auth0/OIDC gives you at login (auth0_sub, email, is_active, email_verified, timestamps). A new user_profiles table holds everything Auth0 doesn't provide (first_name, zip_code, age, primary_language, demographic fields), created later during a separate service-registration step, not at login. This resolves a real conflict: NOT NULL is enforced at the database level the instant any insert runs, so a single users table can't require fields that don't exist yet at login time — splitting into two tables lets each one honestly enforce what it actually needs, when it needs it.
+
+Why this came up: Building ensureUserProvisioned, a middleware that runs after requireAuthentication and creates a users row the first time someone logs in via Auth0 (checks for an existing row by auth0_sub, inserts one if not found, attaches it to req.dbUser). This is the piece that makes the webauthn_credentials insert possible, since it needs a real user_id to attach to.
+
+Other schema decisions locked in today:
+
+Dropped username entirely — Auth0/email is the only login path, no separate username needed
+Dropped local-auth columns from users (password_hash, totp_secret, totp_enabled, failed_login_attempts, locked_until) — dead weight now that Auth0 owns credential storage
+Added auth0_sub TEXT NOT NULL UNIQUE to users as the link to Auth0 identity
+webauthn_credentials links via user_id (foreign key), not user_sub directly, matching the pattern consent and needs_assessments already use
+Defaults set: is_active → TRUE, email_verified → FALSE, created_at/updated_at → now()
+Full schema rewritten as clean CREATE TABLE statements rather than layered ALTER TABLE patches, for clarity
+
+Auth architecture reconfirmed: OIDC (Auth0) is the sole login path, no local email/password system ever. WebAuthn passkeys are strictly optional, added only after an OIDC session exists — never a standalone path to account access. Also locked in: userVerification: 'required' should be added to both generateRegistrationOptions and generateAuthenticationOptions calls, so a passkey ceremony fails unless real PIN/biometric/password verification happened, not just device possession.
+
+WebAuthn conceptual reinforcement: Walked through Android's biometric Class 1/2/3 tiers — only Class 3 (BIOMETRIC_STRONG) sensors are permitted to unlock cryptographic keys like passkeys; weaker sensors are blocked from that entirely at the OS level, so no app-side code is needed to handle "insecure biometric" devices, the platform already gates it. Same protection doesn't have an equivalent gap on iOS (Face ID/Touch ID are the only passkey biometric options there).
+
+Decision on scope: Deliberately not building deeper protections for lost/stolen/shared devices (session timeouts, credential revocation) right now — scoped as a V2 concern, reasoned that Anchor's primary users are likely to be case managers running assessments via the LLM, not unhoused individuals self-installing at scale, so this edge case is lower-priority for the current build phase.
+
+Still open, not yet built: The actual INSERT INTO webauthn_credentials in verifyRegistrationResponse — schema is now unblocked and ready for it, but the insert itself hasn't been written yet. That's the very next step.
+
+Next session: Run the rebuilt schema, then write the webauthn_credentials INSERT, then move to the minimal React/TypeScript test component (using Chrome's virtual authenticator) to actually exercise registration end to end.

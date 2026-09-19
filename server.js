@@ -39,19 +39,19 @@ app.use(
  })
 )
 //
-// NEED TO ADD THESE TO .env
+
 //
 const oidcConfig = {
-    //don't req auth for every req
+    
     authRequired: false,
-    //if /login route is used,logout by redirecting to OIDC provider's own logout endpoint
+   
     auth0Logout: true,
-    //secret used to encrypt OIDC session cookie
+    
     secret: process.env.OIDC_SECRET,
     baseURL: process.env.BASE_URL,
-    //client ID (Google/Mircosoft/AUTH0) issues
+    
     clientID: process.env.OIDC_CLIENT_ID,
-    //tells the lib where to find OIDC metadata
+
     issuerBaseURL: process.env.OIDC_ISSUER_URL
 }
 //registers middleware; uses OIDC middleware
@@ -71,7 +71,8 @@ app.post('/webauthn/register/options', async (req, res) => {
             rpName: 'Anchor',
             rpID: process.env.WEBAUTHN_RP_ID,
             userName: user.email,
-            excludeCredentials: user.credentials || []
+            excludeCredentials: user.credentials,
+            userVerification: 'required'
         })
 
         //save challenge in session so /verify can confirm it matches later

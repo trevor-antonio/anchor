@@ -1,49 +1,49 @@
 \connect anchor_db;
 
 -- Reset database
+DROP TABLE IF EXISTS webauthn_credentials;
+DROP TABLE IF EXISTS needs_assessments;
+DROP TABLE IF EXISTS consent;
+DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS users;
 
---Create table
+-- ============================================================
+-- USERS — identity only. Created at first Auth0/OIDC login.
+-- ============================================================
 CREATE TABLE users (
     user_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    first_name VARCHAR (50) NOT NULL,
-    last_name VARCHAR (50) NOT NULL,
-    username VARCHAR (30) NOT NULL UNIQUE,
-    email VARCHAR (255) NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    zip_code VARCHAR(10) NOT NULL,
-    totp_secret VARCHAR(32),
-    totp_enabled BOOLEAN NOT NULL,
-    failed_login_attempts INTEGER NOT NULL, 
-    locked_until TIMESTAMPTZ, 
-    email_verified BOOLEAN NOT NULL,
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL, 
-    updated_at TIMESTAMPTZ NOT NULL
+    auth0_sub TEXT NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-ALTER TABLE users ALTER COLUMN last_name DROP NOT NULL;
+-- ============================================================
+-- USER_PROFILES — filled in during a separate service-registration
+-- step, after login. One-to-one with users.
+-- ============================================================
+CREATE TABLE user_profiles (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(user_id),
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50),
+    zip_code VARCHAR(10) NOT NULL,
+    age INT NOT NULL,
+    primary_language VARCHAR(60) NOT NULL,
+    gender_identity VARCHAR(60),
+    pronouns VARCHAR(60),
+    sexual_orientation VARCHAR(60),
+    race_ethnicity VARCHAR(60),
+    veteran_status VARCHAR(60),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-ALTER TABLE users ADD COLUMN age INT NOT NULL;
-
-ALTER TABLE users ADD COLUMN gender_identity VARCHAR (60) NOT NULL;
-
-ALTER TABLE users ALTER COLUMN gender_identity DROP NOT NULL;
-
-ALTER TABLE users ADD COLUMN pronouns VARCHAR(60) NOT NULL;
-
-ALTER TABLE users ALTER COLUMN pronouns DROP NOT NULL;
-
-ALTER TABLE users ADD COLUMN sexual_orientation VARCHAR(60);
-
-ALTER TABLE users ADD COLUMN race_ethnicity VARCHAR(60);
-
-ALTER TABLE users ADD COLUMN primary_language VARCHAR(60) NOT NULL;
-
-ALTER TABLE users ADD COLUMN veteran_status VARCHAR(60);
-
--- CONSENT TABLE
-
+-- ============================================================
+-- CONSENT
+-- ============================================================
 CREATE TABLE consent (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id),
@@ -54,8 +54,9 @@ CREATE TABLE consent (
     terms_version TEXT
 );
 
--- NEEDS ASSESSMENT TABLE
-
+-- ============================================================
+-- NEEDS_ASSESSMENTS
+-- ============================================================
 CREATE TABLE needs_assessments (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id),
@@ -68,4 +69,16 @@ CREATE TABLE needs_assessments (
     behavioral_health_symptoms BOOLEAN,
     has_support_system BOOLEAN,
     assessed_at TIMESTAMPTZ
+);
+
+-- ============================================================
+-- WEBAUTHN_CREDENTIALS
+-- ============================================================
+CREATE TABLE webauthn_credentials (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id),
+    credential_id TEXT NOT NULL UNIQUE,
+    public_key TEXT NOT NULL,
+    counter BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
