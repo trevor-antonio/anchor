@@ -109,3 +109,27 @@ Decision on scope: Deliberately not building deeper protections for lost/stolen/
 Still open, not yet built: The actual INSERT INTO webauthn_credentials in verifyRegistrationResponse — schema is now unblocked and ready for it, but the insert itself hasn't been written yet. That's the very next step.
 
 Next session: Run the rebuilt schema, then write the webauthn_credentials INSERT, then move to the minimal React/TypeScript test component (using Chrome's virtual authenticator) to actually exercise registration end to end.
+
+## Journal — September 20, 2026
+
+OIDC/OAuth conceptual work (video walkthrough)
+Built out full term glossary through dictation and correction: resource owner, client, authorization server, resource server, redirect URI, response type, scope, consent screen, client ID/secret, auth code, token exchange, access token, ID token, client registration. Two real misconceptions caught and fixed:
+
+Thought access tokens were permanent/static — they're opaque, short-lived, revocable, usually paired with a refresh token.
+Conflated access token with identity delivery — that's the ID token's job (OIDC-specific JWT, carries the actual identity claims).
+
+Also nailed down why OIDC's security win is credential isolation (the client never touches the raw password), not encryption-in-transit — that's TLS's job and already covered. Took a couple passes to land the distinction cleanly, but it stuck.
+
+Roadmap restructure
+Scrapped the horizontal build order (all DB → all auth → all React) for vertical slices — each module gets DB + Express + React/TS built together so nothing sits untested in the abstract. Reasoning: SQL syntax was going stale between passes, and backend-only code can't actually be tested in isolation. Containerization downgraded from mandatory-per-module to a periodic checkpoint. New 5-phase roadmap published (Auth → LLM conversation/Python entry point → resource referral → integration testing → portfolio prep). Target Dec 25, hard deadline Apr 1, ~14wk buffer if on target.
+
+Anchor auth code review
+Walked the pre-OIDC-pivot WebAuthn routes line by line and found six real bugs: unclosed try/catch, a challenge-assignment line that reads instead of writes, a res.json call sending nothing usable back to the frontend, a Challange/Challenge typo, an undefined db.saveUserCredential placeholder, and stale req.session.user checks that predate the OIDC-primary decision. Decision: scrap the route bodies, rebuild from scratch block by block rather than patch.
+
+Also audited .env: found a duplicate DATABASE_URL (placeholder silently overriding the real one), and confirmed the OIDC and session secret values are still literal placeholder text — Auth0 setup had been discussed before but never actually finished.
+
+Auth0 setup
+Started manual signup (skipped AI-assisted setup — no real time savings for what's already mapped out). Chose Express as the application technology, "Regular Web Application" as the app type. Application named "Anchor." Signed into Auth0 dashboard via GitHub. In progress when the session cut off on rate limit.
+
+Next up
+Grab Domain/Client ID/Client Secret from the finished Auth0 app, set the callback URL, populate .env, fix the duplicate DATABASE_URL, generate a real SESSION_SECRET, add explicit cookie config (secure: true), then rebuild the WebAuthn routes with requiresAuth() + ensureUserProvisioned.
