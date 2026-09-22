@@ -133,3 +133,25 @@ Started manual signup (skipped AI-assisted setup — no real time savings for wh
 
 Next up
 Grab Domain/Client ID/Client Secret from the finished Auth0 app, set the callback URL, populate .env, fix the duplicate DATABASE_URL, generate a real SESSION_SECRET, add explicit cookie config (secure: true), then rebuild the WebAuthn routes with requiresAuth() + ensureUserProvisioned.
+
+
+## Journal — September 21, 2026
+
+Auth0 fully wired up
+Finished the Auth0 application setup that stalled yesterday. Hit a snag where the app was accidentally created as a Single Page Application instead of Regular Web Application — caught it, fixed the type in Basic Information, and Client Secret regenerated correctly once it became a confidential client. Domain, Client ID, and Client Secret all retrieved and dropped into .env, replacing every remaining placeholder. Generated a real SESSION_SECRET via crypto.randomBytes. .env file is now fully populated, no placeholder text left anywhere.
+
+Session cookie hardening
+Added explicit cookie config to the session() call: httpOnly: true, secure tied to NODE_ENV === 'production' (false locally, true once deployed), sameSite: 'lax' for CSRF mitigation, and a 24-hour maxAge. Walked through why each setting matters and, notably, why secure can't be hardcoded true yet — it'd break the session over local HTTP.
+
+Security deep-dive: XSS and prompt injection
+Wanted a firmer grip on the actual mechanism behind httpOnly's XSS defense, not just the term. Worked through it in stages — injection point, storage, rendering — until the "attacker's code runs in the victim's browser, not their own" distinction landed clearly. Also clarified HTTPS (encrypts transit) vs. XSS (a content-trust problem) are separate layers entirely.
+
+From there, watched part of an IBM Technology video on the OWASP Top 10 for LLM applications and worked through direct vs. indirect prompt injection, correctly distinguishing "model gives bad output" from "model has tool access and gets its actions hijacked." Also explored zero-click vulnerabilities and correctly scoped them as a browser/OS-vendor problem, not something app-level code can cause or defend against. Connected the indirect-injection trust-boundary concept directly to the planned Python sanitization layer for the resource-scraping module — scraped content will be treated as untrusted data before it ever reaches the database, same principle as sanitizing user input against XSS.
+
+Decided against a full week with Network Chuck's ethical-hacking content for now — bookmarked for later, likely closer to the neural net work where it's more directly relevant. The OWASP LLM video will be finished in a follow-up session.
+
+WebAuthn routes
+Confirmed ensureUserProvisioned middleware was never actually saved to a file last session — it only existed in conversation. Walked through what it needs to do (look up or create a user row keyed on the OIDC sub claim, attach to req.dbUser) but didn't write it yet — session ended here.
+
+Next up
+Rebuild ensureUserProvisioned as an actual file, decide on the users table schema (specifically the OIDC sub-matching column), then rebuild /webauthn/register/options and /webauthn/register/verify from scratch.
