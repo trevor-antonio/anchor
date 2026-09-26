@@ -155,3 +155,17 @@ Confirmed ensureUserProvisioned middleware was never actually saved to a file la
 
 Next up
 Rebuild ensureUserProvisioned as an actual file, decide on the users table schema (specifically the OIDC sub-matching column), then rebuild /webauthn/register/options and /webauthn/register/verify from scratch.
+
+## Journal — Sept 25, 2026
+
+Why the pivot: Today marks a significant architecture decision — dropping Express entirely in favor of a Python (FastAPI) backend, with React/TypeScript and Postgres unchanged. This wasn't a snap decision; it came out of research into current Bay Area entry-level full-stack job listings, which showed Python + React/TypeScript far more in demand than Node in this market specifically. The pattern: most full-stack roles here now have an AI/LLM component even when it's not in the title, and that shifts the expected backend language toward Python, where the LLM orchestration ecosystem actually lives. I cross-checked this independently before committing — asked a second AI system to research the same question separately, and got the same conclusion back. Two independent reads landing on the same answer is about as much confidence as this kind of market call gets without literally being a hiring manager.
+
+It's not that Node is a bad choice or that Express work was wasted — the auth logic, session concepts, and API design proved out under Express are the same logic, just being re-expressed in a new syntax. And Python was already the intended long-term language for this project's trajectory toward AI safety work, so this pivot aligns the stack with where I was already headed, rather than changing direction. The old Express work is archived in a dedicated express directory as reference, not deleted — it's evidence of the same architectural thinking, just in the language I started in before the market research made the case to switch.
+
+What happened today: Cleared out node_modules in both client and the old root (regenerable, not lost work). Moved server.js and Express-specific files into express as reference. Converted client from JSX to TSX — installed TypeScript + React types, renamed files, sourced tsconfig.json/tsconfig.node.json/tsconfig.app.json from a throwaway Vite scaffold (learned the three-file split the hard way, mid-debug). Reviewed .env line by line: kept Postgres, Auth0/OIDC, and WebAuthn config as-is since none of it was actually Express-specific — only SESSION_SECRET is a genuine open question under FastAPI. Created main.py as the FastAPI entry point.
+
+Architecture vs. syntax: This was almost entirely architecture — deciding what belongs where, what's language-agnostic vs. framework-specific (the .env review was a good real-time test of that distinction). Very little new syntax today by design; that's tomorrow's frontend module work.
+
+For the interview version of this story: This decision sits alongside the WebAuthn/OIDC-over-TOTP call as one of the two biggest architectural trade-offs on this project — one about auth security posture, this one about aligning the whole stack with where the target job market and my own long-term trajectory actually point. Both were made deliberately, with research behind them, not defaulted into.
+
+Note to self: Got a live OIDC secret and session secret pasted into chat today, twice. Not a technical problem, a habit one — rotate both in Auth0 once there's a natural pause, and keep building the "redact before paste" reflex.

@@ -5,6 +5,10 @@ const express = require('express')
 
 const session = require('express-session')
 
+const { ensureUserProvisioned } = require('./middleware/ensureUserProvisioned')
+
+app.get('/test-provision', requiresAuth(), ensureUserProvisioned, (req, res) => res.json(req.dbUser()))
+
 //🟨 Third-party — the express-openid-connect wrapper; auth() builds the OIDC middleware, requiresAuth() protects routes
 const { auth, requiresAuth} = require('express-openid-connect')
 
