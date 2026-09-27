@@ -169,3 +169,13 @@ Architecture vs. syntax: This was almost entirely architecture — deciding what
 For the interview version of this story: This decision sits alongside the WebAuthn/OIDC-over-TOTP call as one of the two biggest architectural trade-offs on this project — one about auth security posture, this one about aligning the whole stack with where the target job market and my own long-term trajectory actually point. Both were made deliberately, with research behind them, not defaulted into.
 
 Note to self: Got a live OIDC secret and session secret pasted into chat today, twice. Not a technical problem, a habit one — rotate both in Auth0 once there's a natural pause, and keep building the "redact before paste" reflex.
+
+## Journal — Sept 26, 2026
+
+No code shipped today, and that's fine — today was a diagnostic and refresher day, not a feature day.
+
+First real React reps: Cold-read Vite's default scaffold App.tsx line by line — imports, JSX structure, the useState hook, onClick handlers, SVG <use> references — before touching Anchor's actual login page. Got the mental model right on nearly everything on the first pass; needed correction mainly on precise vocabulary (useState sets up state, calling the setter is what actually triggers a re-render) and on two genuinely new pieces (SVG's <use> reuse pattern, and the deeper point that JSX only looks like HTML but compiles to real JavaScript function calls — not a document being parsed).
+
+Architecture vs. syntax: Firmly on the syntax side of the ledger today, and that's the whole point of a refresher day. The one architectural thread running underneath both languages: recognizing that "I understand the mechanism, I just need to look up the syntax" is not a weakness to apologize for — it's the actual, permanent shape of professional software development, not a beginner stage to outgrow.
+
+Plan going forward: React/TS tomorrow, Python the day after — kept on separate days for now rather than switching within a single day, with room to alternate same-day later if tomorrow's React work goes smoothly.
